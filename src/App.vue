@@ -1,3 +1,7 @@
+<script setup lang="ts">
+import SchedulePage from '@schedule/ui/SchedulePage/SchedulePage.vue'
+</script>
+
 <template>
-  <main>ShiftSchedule</main>
+  <SchedulePage />
 </template>
