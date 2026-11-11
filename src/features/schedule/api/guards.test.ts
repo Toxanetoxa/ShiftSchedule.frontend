@@ -85,6 +85,30 @@ describe('schedule response guards', () => {
     expect(parseCalendarResponse(calendar())).toEqual(calendar())
   })
 
+  it.each(['Invalid/Zone', '', '   ', '+25:00'])(
+    'rejects an unsupported schedule time zone %j before rendering dates',
+    (timeZone) => {
+      const response = calendar()
+      response.schedule.timeZone = timeZone
+      expect(isCalendarResponse(response)).toBe(false)
+      expect(() => parseCalendarResponse(response)).toThrowError(
+        expect.objectContaining({ code: 'INVALID_RESPONSE' }),
+      )
+      const snapshot = publication()
+      snapshot.snapshot.schedule.timeZone = timeZone
+      expect(isPublicationResponse(snapshot)).toBe(false)
+    },
+  )
+
+  it.each(['UTC', 'Europe/Moscow', 'America/New_York'])(
+    'accepts a supported schedule time zone %s',
+    (timeZone) => {
+      const response = calendar()
+      response.schedule.timeZone = timeZone
+      expect(isCalendarResponse(response)).toBe(true)
+    },
+  )
+
   it('rejects duplicate calendar cells and incomplete date coverage', () => {
     const duplicated = calendar()
     duplicated.shifts.push({ ...duplicated.shifts[0]!, id: '00000000-0000-4000-8000-000000000302' })

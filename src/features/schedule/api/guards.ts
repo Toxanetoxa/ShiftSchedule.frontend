@@ -73,6 +73,15 @@ function timeRange(value: Record<string, unknown>): boolean {
   return duration > 0 && duration < 1440
 }
 
+function timeZone(value: unknown): value is string {
+  if (!text(value)) return false
+  try {
+    return Boolean(new Intl.DateTimeFormat('en', { timeZone: value }).resolvedOptions().timeZone)
+  } catch {
+    return false
+  }
+}
+
 export function isApiDateRange(value: unknown): value is ApiDateRange {
   if (!isRecord(value) || !date(value.from) || !date(value.to)) return false
   const days =
@@ -85,7 +94,7 @@ function isApiSchedule(value: unknown): value is ApiSchedule {
     isRecord(value) &&
     uuid(value.id) &&
     text(value.name) &&
-    text(value.timeZone) &&
+    timeZone(value.timeZone) &&
     integer(value.version, 1)
   )
 }
