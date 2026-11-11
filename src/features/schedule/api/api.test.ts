@@ -69,6 +69,7 @@ describe('schedule HTTP operations', () => {
       saveCells(scheduleId, { expectedVersion: 1, changes: [changedCell] }),
     ).resolves.toMatchObject({ version: 2, changedCells: [changedCell] })
 
+    expect(fetchMock.mock.calls[0]![0]).toBe(`/api/v1/schedules/${scheduleId}/cells`)
     const options = fetchMock.mock.calls[0]![1] as RequestInit
     expect(JSON.parse(String(options.body))).toEqual({
       expectedVersion: 1,
@@ -200,6 +201,9 @@ describe('schedule HTTP operations', () => {
     await expect(getPublication(scheduleId, publicationId, signal)).resolves.toEqual(publication)
 
     expect(fetchMock.mock.calls[0]![0]).toBe(`/api/v1/schedules/${scheduleId}/publications`)
+    expect(fetchMock.mock.calls[1]![0]).toBe(
+      `/api/v1/schedules/${scheduleId}/publications/${publicationId}`,
+    )
     expect(fetchMock.mock.calls[1]![1]).toMatchObject({ method: 'GET', signal })
   })
 })

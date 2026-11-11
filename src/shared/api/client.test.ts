@@ -1,9 +1,33 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ApiError, getJson, requestJson } from './client'
 
-afterEach(() => vi.unstubAllGlobals())
+afterEach(() => {
+  vi.unstubAllGlobals()
+  vi.unstubAllEnvs()
+  vi.resetModules()
+})
 
 describe('jSON API client', () => {
+  it.each([
+    ['/api', 'v1/status', '/api/v1/status'],
+    ['https://api.example.com/api///', '/v2/status', 'https://api.example.com/api/v2/status'],
+    ['https://api.example.com/api/', '', 'https://api.example.com/api'],
+  ])('uses the request version independently of the base URL %s', async (base, path, expected) => {
+    vi.stubEnv('VITE_API_BASE_URL', base)
+    vi.resetModules()
+    const { requestJson: request } = await import('./client')
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ status: 'ok' }), {
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+
+    await request(path)
+
+    expect(fetchMock).toHaveBeenCalledWith(expected, expect.objectContaining({ method: 'GET' }))
+  })
+
   it('sends JSON and the caller AbortSignal without retrying a write', async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       new Response(JSON.stringify({ version: 2 }), {
@@ -14,7 +38,7 @@ describe('jSON API client', () => {
     const signal = new AbortController().signal
 
     await expect(
-      requestJson('/schedules/example/cells', {
+      requestJson('/v1/schedules/example/cells', {
         method: 'PATCH',
         body: { expectedVersion: 1 },
         signal,
@@ -47,7 +71,7 @@ describe('jSON API client', () => {
       ),
     )
 
-    await expect(getJson('schedules/example/calendar')).rejects.toMatchObject({
+    await expect(getJson('v1/schedules/example/calendar')).rejects.toMatchObject({
       name: 'ApiError',
       status: 409,
       code: 'SCHEDULE_VERSION_CONFLICT',

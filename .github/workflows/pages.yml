@@ -39,7 +39,7 @@ jobs:
       - name: Build application
         env:
           PAGES_BASE_PATH: ${{ steps.pages.outputs.base_path }}
-          VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL || 'https://api.example.com/api/v1' }}
+          VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL || 'https://test.api.shift-schedule.videoscale.pro/api' }}
           VITE_SCHEDULE_ID: ${{ vars.VITE_SCHEDULE_ID || '00000000-0000-4000-8000-000000000001' }}
         run: npm run build -- --base="${PAGES_BASE_PATH}/"
 

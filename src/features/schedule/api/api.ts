@@ -20,7 +20,7 @@ export const configuredScheduleId =
   import.meta.env.VITE_SCHEDULE_ID?.trim().toLowerCase() || '00000000-0000-4000-8000-000000000001'
 
 function schedulePath(id: string): string {
-  return `schedules/${encodeURIComponent(id)}`
+  return `v1/schedules/${encodeURIComponent(id)}`
 }
 
 export async function getCalendar(

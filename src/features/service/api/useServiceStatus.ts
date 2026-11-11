@@ -7,7 +7,7 @@ export interface ServiceStatus {
 }
 
 async function getServiceStatus(signal: AbortSignal): Promise<ServiceStatus> {
-  const data = await getJson('', signal)
+  const data = await getJson('v1', signal)
 
   if (
     typeof data !== 'object' ||

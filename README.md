@@ -87,19 +87,19 @@ Workflow `.github/workflows/pages.yml` запускается при push в `ma
 
 В **Settings → Secrets and variables → Actions → Variables** можно добавить переменные репозитория:
 
-| Переменная          | Значение по умолчанию                  | Назначение             |
-| ------------------- | -------------------------------------- | ---------------------- |
-| `VITE_API_BASE_URL` | `https://api.example.com/api/v1`       | Полный HTTPS-адрес API |
-| `VITE_SCHEDULE_ID`  | `00000000-0000-4000-8000-000000000001` | Идентификатор графика  |
+| Переменная          | Значение по умолчанию                                | Назначение                        |
+| ------------------- | ---------------------------------------------------- | --------------------------------- |
+| `VITE_API_BASE_URL` | `https://test.api.shift-schedule.videoscale.pro/api` | Полный HTTPS-адрес API без версии |
+| `VITE_SCHEDULE_ID`  | `00000000-0000-4000-8000-000000000001`               | Идентификатор графика             |
 
-Адрес `https://api.example.com/api/v1` — временная заглушка: до его замены приложение не сможет загрузить или сохранить график. Storybook работает независимо. После изменения переменных запустите workflow заново: настройки встраиваются во время сборки, локальный `.env` в GitHub Actions не используется.
+По умолчанию приложение обращается к API на `https://test.api.shift-schedule.videoscale.pro/api`. Версия API добавляется в пути конкретных запросов. Storybook работает независимо. После изменения переменных запустите workflow заново: настройки встраиваются во время сборки, локальный `.env` в GitHub Actions не используется.
 
 GitHub Pages раздаёт статические файлы и не предоставляет прокси `/api`. API должен быть доступен по HTTPS и разрешать CORS для origin `https://toxanetoxa.github.io` — без пути `/ShiftSchedule.frontend/`. Значения `VITE_*` доступны посетителю в JavaScript, поэтому секреты в них не размещают.
 
 Проверить такую же структуру сборки локально можно командами:
 
 ```sh
-VITE_API_BASE_URL=https://api.example.com/api/v1 npm run build -- --base=/ShiftSchedule.frontend/
+VITE_API_BASE_URL=https://test.api.shift-schedule.videoscale.pro/api npm run build -- --base=/ShiftSchedule.frontend/
 npm run build-storybook -- --output-dir dist/storybook
 npm run preview -- --base=/ShiftSchedule.frontend/
 ```
@@ -186,13 +186,15 @@ Sass подключён к Vite, Storybook и Vitest. Все компонент�
 
 ## Настройки API и портов
 
-Настройки обоих вариантов запуска находятся в `.env`, созданном из `.env.example`. Локальный `.env` исключён через `.gitignore`; `.env.example` служит шаблоном. По умолчанию используются `FRONT_PORT=5173`, `STORYBOOK_PORT=6006`, `VITE_API_BASE_URL=/api/v1`, `VITE_SCHEDULE_ID=00000000-0000-4000-8000-000000000001`.
+Настройки обоих вариантов запуска находятся в `.env`, созданном из `.env.example`. Локальный `.env` исключён через `.gitignore`; `.env.example` служит шаблоном. По умолчанию используются `FRONT_PORT=5173`, `STORYBOOK_PORT=6006`, `VITE_API_BASE_URL=/api`, `VITE_SCHEDULE_ID=00000000-0000-4000-8000-000000000001`.
+
+`VITE_API_BASE_URL` содержит адрес API без версии. Версия указывается в функциях запросов: например, `requestJson('v1/schedules/...')` обращается к `/api/v1/schedules/...`. Общий клиент `src/shared/api/client.ts` соединяет базовый адрес с переданным путём и не выбирает версию API.
 
 `STORYBOOK_PORT` меняет порт в Compose. Для локального Storybook используйте аргумент CLI, например `npm run storybook -- --port 6007`. Ссылку на каталог в приложении можно переопределить через `VITE_STORYBOOK_URL`.
 
 `API_PROXY_TARGET` задаёт адрес назначения Vite-прокси для запросов `/api`: без Docker это `http://127.0.0.1:8000`, внутри Compose — `http://host.docker.internal:8000`. При необходимости задайте адрес, доступный из выбранного окружения. После изменения `.env` выполните `make restart` либо перезапустите локальный Vite.
 
-Для production задайте полный `VITE_API_BASE_URL` перед сборкой, например `https://api.example.com/api/v1`, или используйте `/api/v1`, если на домене приложения настроен прокси `/api`. Переменные `VITE_*` входят в клиентскую сборку; секреты в них хранить нельзя.
+Для production задайте полный `VITE_API_BASE_URL` перед сборкой, например `https://api.example.com/api`, или используйте `/api`, если на домене приложения настроен прокси `/api`. Переменные `VITE_*` входят в клиентскую сборку; секреты в них хранить нельзя.
 
 ## Импорты и алиасы
 
