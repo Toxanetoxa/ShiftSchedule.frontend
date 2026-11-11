@@ -74,6 +74,38 @@ npm run build-storybook   # Статический Storybook в storybook-static
 npm run preview           # Локальный просмотр готовой сборки после npm run build
 ```
 
+## GitHub Pages
+
+Приложение и Storybook публикуются одним сайтом:
+
+- Приложение: [https://toxanetoxa.github.io/ShiftSchedule.frontend/](https://toxanetoxa.github.io/ShiftSchedule.frontend/).
+- Storybook: [https://toxanetoxa.github.io/ShiftSchedule.frontend/storybook/](https://toxanetoxa.github.io/ShiftSchedule.frontend/storybook/).
+
+Workflow `.github/workflows/pages.yml` запускается при push в `master` или вручную через **Actions → Deploy application and Storybook to Pages → Run workflow**. Он устанавливает зависимости через `npm ci`, запускает линтер, проверку форматирования, типов и тесты, затем собирает приложение в `dist/`, а Storybook — в `dist/storybook/`. Обе сборки публикуются вместе после успешных проверок.
+
+Для первоначальной настройки репозитория выберите **Settings → Pages → Build and deployment → Source → GitHub Actions**. Путь приложения определяется через `actions/configure-pages`; Storybook использует относительные пути к ресурсам. Локальные команды запуска остаются прежними. Подробнее: [GitHub Pages с собственным workflow](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages).
+
+В **Settings → Secrets and variables → Actions → Variables** можно добавить переменные репозитория:
+
+| Переменная          | Значение по умолчанию                  | Назначение             |
+| ------------------- | -------------------------------------- | ---------------------- |
+| `VITE_API_BASE_URL` | `https://api.example.com/api/v1`       | Полный HTTPS-адрес API |
+| `VITE_SCHEDULE_ID`  | `00000000-0000-4000-8000-000000000001` | Идентификатор графика  |
+
+Адрес `https://api.example.com/api/v1` — временная заглушка: до его замены приложение не сможет загрузить или сохранить график. Storybook работает независимо. После изменения переменных запустите workflow заново: настройки встраиваются во время сборки, локальный `.env` в GitHub Actions не используется.
+
+GitHub Pages раздаёт статические файлы и не предоставляет прокси `/api`. API должен быть доступен по HTTPS и разрешать CORS для origin `https://toxanetoxa.github.io` — без пути `/ShiftSchedule.frontend/`. Значения `VITE_*` доступны посетителю в JavaScript, поэтому секреты в них не размещают.
+
+Проверить такую же структуру сборки локально можно командами:
+
+```sh
+VITE_API_BASE_URL=https://api.example.com/api/v1 npm run build -- --base=/ShiftSchedule.frontend/
+npm run build-storybook -- --output-dir dist/storybook
+npm run preview -- --base=/ShiftSchedule.frontend/
+```
+
+Откройте `http://localhost:4173/ShiftSchedule.frontend/` и `http://localhost:4173/ShiftSchedule.frontend/storybook/`. Сгенерированный `dist/` исключён из Git.
+
 ## Рабочее приложение
 
 На `localhost:5173` открывается рабочий редактор с загрузкой, сохранением ячеек и публикацией через API; Storybook остаётся независимым каталогом компонентов без HTTP-записи.

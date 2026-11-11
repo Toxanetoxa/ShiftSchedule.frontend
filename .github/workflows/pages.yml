@@ -1,0 +1,68 @@
+name: Deploy application and Storybook to Pages
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Configure Pages
+        id: pages
+        uses: actions/configure-pages@v5
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check code and run tests
+        run: npm run check
+
+      - name: Build application
+        env:
+          PAGES_BASE_PATH: ${{ steps.pages.outputs.base_path }}
+          VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL || 'https://api.example.com/api/v1' }}
+          VITE_SCHEDULE_ID: ${{ vars.VITE_SCHEDULE_ID || '00000000-0000-4000-8000-000000000001' }}
+        run: npm run build -- --base="${PAGES_BASE_PATH}/"
+
+      - name: Build Storybook inside the site
+        run: npm run build-storybook -- --output-dir dist/storybook
+
+      - name: Upload site
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    if: github.ref == 'refs/heads/master'
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
