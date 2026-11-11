@@ -1,0 +1,74 @@
+{
+  "name": "shiftschedule-front",
+  "type": "module",
+  "version": "0.1.0",
+  "private": true,
+  "engines": {
+    "node": ">=26.0.0"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "npm run typecheck && vite build",
+    "preview": "vite preview",
+    "typecheck": "vue-tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "storybook": "storybook dev --port 6006 --no-open",
+    "build-storybook": "storybook build",
+    "lint": "eslint . --max-warnings 0",
+    "lint:fix": "eslint . --fix --max-warnings 0",
+    "format": "prettier . --write",
+    "format:check": "prettier . --check",
+    "check": "npm run lint && npm run format:check && npm run typecheck && npm test"
+  },
+  "dependencies": {
+    "@dnd-kit/dom": "^0.5.3",
+    "@dnd-kit/vue": "^0.5.3",
+    "@fontsource/manrope": "^5.3.0",
+    "@internationalized/date": "^3.12.4",
+    "@tanstack/vue-query": "^5.107.1",
+    "reka-ui": "^2.11.0",
+    "vue": "^3.5.45"
+  },
+  "devDependencies": {
+    "@antfu/eslint-config": "^10.0.0",
+    "@storybook/addon-a11y": "^10.6.7",
+    "@storybook/addon-docs": "^10.6.7",
+    "@storybook/vue3-vite": "^10.6.7",
+    "@types/node": "^26.6.6",
+    "@vitejs/plugin-vue": "^6.0.10",
+    "@vue/test-utils": "^2.5.1",
+    "@vue/tsconfig": "^0.9.1",
+    "eslint": "^10.14.0",
+    "eslint-config-prettier": "^10.1.8",
+    "jsdom": "^31.0.0",
+    "prettier": "^3.9.10",
+    "sass": "^1.108.1",
+    "storybook": "^10.6.7",
+    "typescript": "~6.0.3",
+    "vite": "^8.3.7",
+    "vite-plugin-vue-devtools": "^8.2.1",
+    "vitest": "^5.1.0",
+    "vue-tsc": "^3.3.14"
+  },
+  "overrides": {
+    "@eslint/config-array": {
+      "minimatch": "^11.0.6"
+    },
+    "@typescript-eslint/typescript-estree": {
+      "minimatch": "^11.0.6"
+    },
+    "eslint": {
+      "minimatch": "^11.0.6"
+    },
+    "js-beautify": {
+      "glob": "^14.0.4",
+      "editorconfig": {
+        "minimatch": "^11.0.6"
+      }
+    },
+    "micromark-extension-math": {
+      "katex": "^0.18.2"
+    }
+  }
+}

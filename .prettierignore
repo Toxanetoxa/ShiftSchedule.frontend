@@ -1,0 +1,14 @@
+node_modules/
+dist/
+storybook-static/
+coverage/
+.vite/
+package-lock.json
+.env
+.env.*
+
+# Original design documentation and tokens.
+frontend-documentation.md
+frontend-token-map.json
+frontend-tokens.css
+trash.md

@@ -1,0 +1,210 @@
+@import '@fontsource/manrope/400.css';
+@import '@fontsource/manrope/500.css';
+@import '@fontsource/manrope/600.css';
+@import './tokens.css';
+
+:root {
+  font-family: var(--schedule-font-family), system-ui, sans-serif;
+  font-size: var(--schedule-font-size-body);
+  line-height: var(--schedule-line-height-body);
+  font-weight: var(--schedule-font-weight-regular);
+  color: var(--schedule-color-label-primary);
+  background: var(--schedule-color-surface-muted);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  min-inline-size: 320px;
+  margin: 0;
+}
+
+h1,
+h2,
+p {
+  margin: 0;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+a {
+  color: var(--figma-labels-brand-primary);
+}
+
+a:focus-visible {
+  outline: var(--schedule-focus-width) solid var(--schedule-color-focus);
+  outline-offset: var(--schedule-focus-offset);
+  border-radius: var(--schedule-radius-control);
+}
+
+.starter-page {
+  inline-size: min(100%, 960px);
+  margin-inline: auto;
+  padding: clamp(24px, 5vw, 48px) var(--figma-spacing-padding-2xl);
+}
+
+.starter-header,
+.starter-panel-heading,
+.starter-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--figma-spacing-padding-xl);
+}
+
+.starter-brand {
+  font-weight: var(--schedule-font-weight-semibold);
+}
+
+.starter-link,
+.starter-eyebrow,
+.starter-service-label,
+.starter-caption,
+.starter-footer {
+  font-size: var(--schedule-font-size-small);
+  line-height: var(--schedule-line-height-small);
+}
+
+.starter-link {
+  text-decoration: none;
+}
+
+.starter-link:hover {
+  text-decoration: underline;
+}
+
+.starter-intro {
+  display: grid;
+  gap: var(--figma-spacing-padding-xl);
+  margin-block: clamp(40px, 8vw, 80px) var(--figma-spacing-padding-2xl);
+}
+
+.starter-eyebrow,
+.starter-caption,
+.starter-footer,
+.starter-description {
+  color: var(--schedule-color-label-secondary);
+}
+
+h1 {
+  font-size: var(--schedule-font-size-title);
+  line-height: var(--schedule-line-height-title);
+  font-weight: var(--schedule-font-weight-title);
+  letter-spacing: var(--schedule-tracking-title);
+}
+
+.starter-description {
+  max-inline-size: 620px;
+}
+
+.starter-panel {
+  display: grid;
+  gap: var(--figma-spacing-padding-2xl);
+  padding: var(--figma-spacing-padding-2xl);
+  border: var(--schedule-button-border-width) solid var(--schedule-color-border-subtle);
+  border-radius: var(--figma-radius-2xl);
+  background: var(--schedule-color-surface-primary);
+}
+
+.starter-panel h2 {
+  margin-block-end: var(--figma-spacing-margin-s);
+  font-size: var(--schedule-font-size-body);
+  line-height: var(--schedule-line-height-body);
+  font-weight: var(--schedule-font-weight-semibold);
+}
+
+.starter-service-label {
+  padding: var(--figma-spacing-margin-s) var(--figma-spacing-margin-m);
+  border-radius: var(--schedule-radius-control);
+  background: var(--schedule-color-surface-muted);
+  color: var(--schedule-color-label-secondary);
+}
+
+.starter-status {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--figma-spacing-margin-m);
+  min-block-size: var(--schedule-line-height-body);
+}
+
+.starter-status-dot {
+  flex: 0 0 8px;
+  block-size: 8px;
+  margin-block-start: 8px;
+  border-radius: var(--schedule-radius-pill);
+  background: var(--schedule-color-brand-action);
+}
+
+.starter-status[data-state='pending'] .starter-status-dot {
+  background: var(--schedule-color-label-secondary);
+}
+
+.starter-status[data-state='error'] .starter-status-dot {
+  background: var(--schedule-color-field-error);
+}
+
+.starter-error-details {
+  margin-block-start: var(--figma-spacing-margin-s);
+  overflow-wrap: anywhere;
+  color: var(--schedule-color-field-error);
+  font-size: var(--schedule-font-size-small);
+  line-height: var(--schedule-line-height-small);
+}
+
+.starter-actions {
+  justify-content: flex-start;
+  padding-block-start: var(--figma-spacing-padding-2xl);
+  border-block-start: var(--schedule-button-border-width) solid var(--schedule-color-border-subtle);
+}
+
+.starter-footer {
+  margin-block-start: var(--figma-spacing-padding-2xl);
+}
+
+.story-variants {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--figma-spacing-padding-xl);
+}
+
+.token-palette {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: var(--figma-spacing-padding-xl);
+  max-inline-size: 1080px;
+}
+
+.token-swatch {
+  overflow: hidden;
+  border: var(--schedule-button-border-width) solid var(--schedule-color-border-subtle);
+  border-radius: var(--schedule-radius-panel);
+  background: var(--schedule-color-surface-primary);
+}
+
+.token-swatch__color {
+  block-size: 88px;
+  border-block-end: var(--schedule-button-border-width) solid var(--schedule-color-border-subtle);
+}
+
+.token-swatch__label {
+  padding: var(--figma-spacing-padding-l);
+}
+
+.token-swatch__label code {
+  display: block;
+  margin-block-start: var(--figma-spacing-margin-s);
+  overflow-wrap: anywhere;
+  color: var(--schedule-color-label-secondary);
+  font-size: var(--schedule-font-size-caption);
+  line-height: var(--schedule-line-height-caption);
+}

@@ -1,0 +1,29 @@
+# Dependencies, builds and test output
+node_modules/
+dist/
+storybook-static/
+coverage/
+.vite/
+.cache/
+*.tsbuildinfo
+
+# Local settings; keep the shared template
+.env
+.env.*
+!.env.example
+
+# Editor and operating system files
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+*.log
+*.swp
+*.swo
+*~
+
+# Local design references and notes
+/trash.md
+/frontend-tokens.css
+/frontend-token-map.json
+/frontend-documentation.md

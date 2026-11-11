@@ -1,0 +1,24 @@
+{
+  "extends": "@vue/tsconfig/tsconfig.dom.json",
+  "compilerOptions": {
+    "paths": {
+      "@ui": ["./src/shared/ui/index.ts"],
+      "@ui/*": ["./src/shared/ui/*"],
+      "@schedule/*": ["./src/features/schedule/*"],
+      "@/*": ["./src/*"]
+    },
+    "types": ["vite/client", "node"],
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noEmit": true
+  },
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.vue",
+    ".storybook/**/*.ts",
+    "config/**/*.ts",
+    "vite.config.ts",
+    "vitest.config.ts"
+  ]
+}
