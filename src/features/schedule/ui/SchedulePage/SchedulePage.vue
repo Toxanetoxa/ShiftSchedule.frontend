@@ -32,7 +32,7 @@ import ShiftTemplateCard from '@schedule/ui/ShiftTemplateCard/ShiftTemplateCard.
 import ShiftTemplatePanel from '@schedule/ui/ShiftTemplatePanel/ShiftTemplatePanel.vue'
 import TemplatePickerPopover from '@schedule/ui/TemplatePickerPopover/TemplatePickerPopover.vue'
 import UnsavedChangesDialog from '@schedule/ui/UnsavedChangesDialog/UnsavedChangesDialog.vue'
-import { AppShell, UiButton, UiDialog } from '@ui'
+import { AppShell, UiButton, UiDialog, UiIcon } from '@ui'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 const workspace = useScheduleWorkspace()
@@ -55,7 +55,7 @@ const {
   loadError,
   error,
   message,
-  savedAt,
+  updatedAt,
   busy,
   saving,
   publishing,
@@ -365,6 +365,9 @@ watch(search, () => {
   actionDate.value = null
   pickerOpen.value = false
 })
+watch(selectedCells, (cells) => {
+  if (!cells.length) pickerOpen.value = false
+})
 watch(
   () => [view.value, activeDate.value, currentPage.value],
   () => {
@@ -481,6 +484,7 @@ onBeforeUnmount(() => {
           :dirty-count="dirtySet.size"
           :saving="saving"
           :publishing="publishing"
+          :updated-at="updatedAt"
           :can-save="canSave && !pendingTransfer && !keyboardSource"
           :can-publish="canPublish && !pendingTransfer && !keyboardSource"
           @back="navigate('home')"
@@ -488,11 +492,9 @@ onBeforeUnmount(() => {
           @publish="openPublish"
         />
         <ScheduleFeedback
-          :loading="isFetching && !isLoading"
           :error="feedbackError"
           :offline="offline"
           :remote-updated="remoteUpdated"
-          :saved-at="savedAt"
           @retry="retry"
           @review-conflicts="workspace.review()"
         />
@@ -525,10 +527,30 @@ onBeforeUnmount(() => {
               :disabled="interactionsDisabled"
               @update:view="changePeriod($event, activeDate)"
               @clear-search="search = ''"
-              @choose-template="pickerOpen = true"
               @clear-cells="execute({ kind: 'clear', targets: selectedCells })"
               @clear-selection="selectedKeys = []"
-            />
+            >
+              <template #template-action>
+                <TemplatePickerPopover
+                  v-model:open="pickerOpen"
+                  :templates="templates"
+                  :target-summary="`Выделено ячеек: ${selectedCells.length}`"
+                  :disabled="interactionsDisabled || !selectedCells.length"
+                  @select-template="applyTemplate"
+                >
+                  <template #trigger>
+                    <UiButton
+                      color="neutral"
+                      variant="quinary"
+                      size="compact"
+                      :disabled="interactionsDisabled || !selectedCells.length"
+                      ><template #leading><UiIcon name="plus" /></template>Поставить
+                      шаблон</UiButton
+                    >
+                  </template>
+                </TemplatePickerPopover>
+              </template>
+            </ScheduleToolbar>
             <PeriodNavigator
               :active-date="activeDate"
               :view="view"
@@ -539,31 +561,13 @@ onBeforeUnmount(() => {
               @today="today"
               @choose-date="changePeriod(view, $event)"
             />
-            <div v-if="narrow || selectedCells.length" :class="$style.actions">
+            <div v-if="narrow" :class="$style.actions">
               <UiButton
-                v-if="narrow"
                 color="neutral"
                 variant="quaternary"
                 :disabled="interactionsDisabled"
                 @click="drawerOpen = true"
                 >Смены и шаблоны</UiButton
-              >
-              <TemplatePickerPopover
-                v-if="selectedCells.length"
-                v-model:open="pickerOpen"
-                :templates="templates"
-                :target-summary="`Выделено ячеек: ${selectedCells.length}`"
-                :disabled="interactionsDisabled"
-                @select-template="applyTemplate"
-                ><template #trigger
-                  ><UiButton
-                    color="neutral"
-                    variant="tertiary"
-                    size="compact"
-                    :disabled="interactionsDisabled"
-                    >Шаблон для выделения</UiButton
-                  ></template
-                ></TemplatePickerPopover
               >
             </div>
             <div
@@ -667,7 +671,7 @@ onBeforeUnmount(() => {
             />
           </div>
         </div>
-        <p v-if="liveMessage" :class="$style.message" role="status">{{ liveMessage }}</p>
+        <p :class="$style.message" role="status">{{ liveMessage }}</p>
       </div>
       <UiDialog
         v-model:open="notificationOpen"
@@ -765,8 +769,7 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: var(--figma-spacing-margin-m);
 }
-.publication,
-.message {
+.publication {
   padding: var(--figma-spacing-padding-l);
   border-radius: var(--schedule-radius-control);
   background: var(--schedule-color-surface-primary);
@@ -790,8 +793,17 @@ onBeforeUnmount(() => {
   border-radius: var(--schedule-radius-control);
   background: var(--schedule-color-coverage-filled-bg);
 }
-.muted,
 .message {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.muted {
   margin: 0;
   color: var(--schedule-color-label-secondary);
   font-size: var(--schedule-font-size-small);

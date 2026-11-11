@@ -424,6 +424,7 @@ export function useScheduleWorkspace() {
     saveVersion: draft.saveVersion,
     isLoading,
     isFetching: query.isFetching,
+    updatedAt: query.dataUpdatedAt,
     loadError,
     error,
     message,

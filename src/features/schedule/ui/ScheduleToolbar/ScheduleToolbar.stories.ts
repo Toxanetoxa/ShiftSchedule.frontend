@@ -16,7 +16,7 @@ const meta = {
     docs: {
       description: {
         component:
-          'М: при пустом выделении — поиск и режим; при непустом — контекстная панель. Поиск и режим контролируемые. Р: narrow-перенос.',
+          'При пустом выделении доступны поиск и режим, при непустом — действия с ячейками. Оба состояния сохраняют общую высоту, поэтому таблица не сдвигается при переключении и адаптивном переносе. Скрытые контролы исключены из взаимодействия. Кнопка «Снять» возвращает фокус на поиск без прокрутки. Слот template-action позволяет встроить выбор шаблона в панель.',
       },
     },
   },
@@ -60,4 +60,8 @@ export const Month: Story = { args: { view: 'month' } }
 export const DisabledProposed: Story = { args: { disabled: true } }
 export const NarrowProposed: Story = {
   decorators: [() => ({ template: '<div style="max-width: 360px"><story /></div>' })],
+}
+export const NarrowSelected: Story = {
+  ...NarrowProposed,
+  args: { modelValue: 'Анна', selectionSummary: { cellCount: 8, employeeCount: 2, dayCount: 4 } },
 }

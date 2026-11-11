@@ -18,14 +18,20 @@ const emit = defineEmits<{ chooseTemplate: []; clearCells: []; clearSelection: [
       <span>Дни: {{ dayCount }}</span>
     </div>
     <div :class="$style.actions">
-      <UiButton
-        color="neutral"
-        variant="quinary"
-        size="compact"
+      <slot
+        name="template-action"
         :disabled="disabled || cellCount < 1"
-        @click="emit('chooseTemplate')"
-        ><template #leading><UiIcon name="plus" /></template>Поставить шаблон</UiButton
+        :choose-template="() => emit('chooseTemplate')"
       >
+        <UiButton
+          color="neutral"
+          variant="quinary"
+          size="compact"
+          :disabled="disabled || cellCount < 1"
+          @click="emit('chooseTemplate')"
+          ><template #leading><UiIcon name="plus" /></template>Поставить шаблон</UiButton
+        >
+      </slot>
       <UiButton
         color="neutral"
         variant="quinary"

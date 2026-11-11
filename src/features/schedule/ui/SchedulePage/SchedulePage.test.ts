@@ -10,6 +10,7 @@ import type {
 import type { ShiftInput } from '@schedule/domain/types'
 import type { VueWrapper } from '@vue/test-utils'
 import { configuredScheduleId } from '@schedule/api/api'
+import { scheduleKeys } from '@schedule/api/query'
 import { addCalendarDays } from '@schedule/domain/calendar'
 import { cellKey } from '@schedule/domain/types'
 import { ScheduleHeader, ShiftTemplatePanel } from '@schedule/ui'
@@ -134,6 +135,7 @@ function createServer() {
   let version = 1
   let shifts: ApiShift[] = []
   let publication: PublicationResponse | undefined
+  let nextCalendarResponse: Promise<Response | undefined> | undefined
   vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, options) => {
     const url = new URL(String(input), 'http://localhost')
     const request: RequestRecord = {
@@ -160,7 +162,10 @@ function createServer() {
           },
         ]
       }
-      return json(calendar(range, version, shifts))
+      const pendingResponse = nextCalendarResponse
+      nextCalendarResponse = undefined
+      const response = await pendingResponse
+      return response ?? json(calendar(range, version, shifts))
     }
     if (request.method === 'PATCH' && url.pathname.endsWith('/cells')) {
       const body = request.body as SaveCellsRequest
@@ -203,6 +208,13 @@ function createServer() {
   })
   return {
     requests,
+    deferCalendar(): (response?: Response) => void {
+      let complete!: (response?: Response) => void
+      nextCalendarResponse = new Promise((resolve) => {
+        complete = resolve
+      })
+      return complete
+    },
     range(): ApiDateRange {
       if (!initialRange) throw new Error('Calendar has not loaded')
       return initialRange
@@ -308,6 +320,159 @@ async function applyMorning(wrapper: VueWrapper, date: string): Promise<void> {
 }
 
 describe('schedulePage real component integration', () => {
+  it('keeps the grid, draft, selection and scroll position during a background refresh', async () => {
+    const server = createServer()
+    const { wrapper, client } = await mountApp()
+    const date = server.range().from
+    await applyMorning(wrapper, date)
+    const grid = wrapper.get('[role="grid"]')
+    const gridElement = grid.element as HTMLElement
+    const selected = cell(wrapper, annaId, date)
+    const selectedElement = selected.element as HTMLElement
+    gridElement.scrollTop = 120
+    gridElement.scrollLeft = 240
+    selectedElement.focus()
+    await nextTick()
+
+    const complete = server.deferCalendar()
+    const refresh = client.refetchQueries({
+      queryKey: scheduleKeys.calendars(configuredScheduleId),
+    })
+    await flushPromises()
+    expect(client.isFetching()).toBe(1)
+    expect(wrapper.get('[role="grid"]').element).toBe(gridElement)
+    expect(cell(wrapper, annaId, date).element).toBe(selectedElement)
+    expect(grid.attributes('aria-busy')).toBe('false')
+    expect(grid.attributes('aria-disabled')).not.toBe('true')
+    expect(document.activeElement).toBe(selectedElement)
+    expect(wrapper.find('[data-state="loading"]').exists()).toBe(false)
+    expect(wrapper.text()).not.toContain('Обновляем график…')
+    expect(wrapper.getComponent(ScheduleHeader).text()).toContain('Обновлено в')
+
+    // A background read must not block the user's next selection.
+    await cell(wrapper, borisId, addCalendarDays(date, 1)).trigger('click')
+    expect(wrapper.findAll('[data-cell-key][aria-selected="true"]')).toHaveLength(2)
+    complete()
+    await refresh
+    await flushPromises()
+
+    expect(wrapper.get('[role="grid"]').element).toBe(gridElement)
+    expect(cell(wrapper, annaId, date).element).toBe(selectedElement)
+    expect(selected.attributes('aria-selected')).toBe('true')
+    expect(selected.attributes('aria-label')).toContain('07:00–15:00')
+    expect(selected.attributes('aria-label')).toContain('изменения не сохранены')
+    expect(wrapper.findAll('[data-cell-key][aria-selected="true"]')).toHaveLength(2)
+    expect(gridElement.scrollTop).toBe(120)
+    expect(gridElement.scrollLeft).toBe(240)
+    expect(wrapper.find('[data-state="loading"]').exists()).toBe(false)
+    expect(server.requests.filter((request) => request.method !== 'GET')).toHaveLength(0)
+  })
+
+  it('clears selected cells and reapplies a template from the selection toolbar without replacing the grid', async () => {
+    const server = createServer()
+    const { wrapper } = await mountApp()
+    const date = server.range().from
+    const gridElement = wrapper.get('[role="grid"]').element
+    const selected = cell(wrapper, borisId, date)
+    const selectedElement = selected.element
+    await selected.trigger('click')
+    expect(selected.attributes('aria-label')).toContain('09:00–17:00')
+
+    await button(wrapper.element, 'Очистить').trigger('click')
+    expect(cell(wrapper, borisId, date).element).toBe(selectedElement)
+    expect(selected.attributes('aria-selected')).toBe('true')
+    expect(selected.attributes('aria-label')).toContain('нет смены')
+    expect(wrapper.get('[role="grid"]').element).toBe(gridElement)
+    expect(wrapper.getComponent(ScheduleHeader).get('[role="status"]').text()).toBe(
+      'Несохранённых изменений: 1',
+    )
+    expect(wrapper.text()).not.toContain('Шаблон для выделения')
+
+    await button(wrapper.element, 'Поставить шаблон').trigger('click')
+    await flushPromises()
+    const picker = document.querySelector<HTMLElement>(
+      '[role="dialog"][aria-label="Выбрать шаблон смены"]',
+    )
+    expect(picker).not.toBeNull()
+    await button(picker!, /^Утро/).trigger('click')
+    await flushPromises()
+    expect(document.querySelector('[aria-label="Выбрать шаблон смены"]')).toBeNull()
+    expect(selected.attributes('aria-label')).toContain('07:00–15:00')
+    expect(selected.attributes('aria-selected')).toBe('true')
+
+    await button(wrapper.element, 'Сохранить').trigger('click')
+    await flushPromises()
+    expect(wrapper.get('[role="grid"]').element).toBe(gridElement)
+    expect(cell(wrapper, borisId, date).element).toBe(selectedElement)
+    expect(selected.attributes('aria-selected')).toBe('true')
+    expect(selected.attributes('aria-label')).not.toContain('изменения не сохранены')
+    expect(wrapper.getComponent(ScheduleHeader).get('[role="status"]').text()).toBe(
+      'Все изменения сохранены',
+    )
+    expect(wrapper.find('[data-state="saved"]').exists()).toBe(false)
+    expect(wrapper.find('[data-state="loading"]').exists()).toBe(false)
+    const writes = server.requests.filter((request) => request.method !== 'GET')
+    expect(writes).toHaveLength(1)
+    expect((writes[0]!.body as SaveCellsRequest).changes).toEqual([
+      {
+        employeeId: borisId,
+        workDate: date,
+        shift: {
+          startTime: '07:00',
+          endTime: '15:00',
+          endDayOffset: 0,
+          sourceTemplateId: templateId,
+        },
+      },
+    ])
+  })
+
+  it('keeps background refresh errors actionable while preserving the visible draft', async () => {
+    const server = createServer()
+    const { wrapper, client } = await mountApp()
+    const date = server.range().from
+    await applyMorning(wrapper, date)
+    const gridElement = wrapper.get('[role="grid"]').element
+    const complete = server.deferCalendar()
+    const refresh = client.refetchQueries({
+      queryKey: scheduleKeys.calendars(configuredScheduleId),
+    })
+    complete(json({ error: { message: 'Не удалось обновить график.' } }, 400))
+    await refresh
+    await flushPromises()
+
+    const feedback = wrapper.get('[data-state="error"]')
+    expect(feedback.text()).toContain('Не удалось обновить график.')
+    expect(wrapper.get('[role="grid"]').element).toBe(gridElement)
+    expect(cell(wrapper, annaId, date).attributes('aria-label')).toContain('07:00–15:00')
+    expect(cell(wrapper, annaId, date).attributes('aria-selected')).toBe('true')
+    await button(feedback.element, 'Повторить').trigger('click')
+    await flushPromises()
+    await vi.waitFor(() => expect(wrapper.find('[data-state="error"]').exists()).toBe(false))
+    expect(wrapper.get('[role="grid"]').element).toBe(gridElement)
+    expect(cell(wrapper, annaId, date).attributes('aria-label')).toContain('изменения не сохранены')
+  })
+
+  it('still offers review when a background refresh finds a new server version', async () => {
+    const server = createServer()
+    const { wrapper, client } = await mountApp()
+    const date = server.range().from
+    await applyMorning(wrapper, date)
+    server.advanceRemote()
+    await client.refetchQueries({ queryKey: scheduleKeys.calendars(configuredScheduleId) })
+    await flushPromises()
+
+    const feedback = wrapper.get('[data-state="remote"]')
+    expect(feedback.text()).toContain('На сервере появилась новая версия графика.')
+    expect(cell(wrapper, annaId, date).attributes('aria-label')).toContain('07:00–15:00')
+    await button(feedback.element, 'Проверить изменения').trigger('click')
+    await flushPromises()
+    expect(document.querySelector('[role="dialog"]')?.textContent).toContain(
+      'Согласовать изменения',
+    )
+    expect(server.requests.filter((request) => request.method !== 'GET')).toHaveLength(0)
+  })
+
   it('toggles clicked cells independently and applies a template to the remaining selection', async () => {
     const server = createServer()
     const { wrapper } = await mountApp()

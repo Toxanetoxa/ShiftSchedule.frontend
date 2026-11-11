@@ -10,11 +10,26 @@ const props = withDefaults(
     publishing?: boolean
     canSave?: boolean
     canPublish?: boolean
+    updatedAt?: number
   }>(),
-  { dirtyCount: 0, saving: false, publishing: false, canSave: false, canPublish: false },
+  {
+    dirtyCount: 0,
+    saving: false,
+    publishing: false,
+    canSave: false,
+    canPublish: false,
+    updatedAt: 0,
+  },
 )
 const emit = defineEmits<{ back: []; save: []; publish: [] }>()
 const pending = computed(() => props.saving || props.publishing)
+const updatedTime = computed(() =>
+  props.updatedAt
+    ? new Intl.DateTimeFormat('ru-RU', { hour: '2-digit', minute: '2-digit' }).format(
+        props.updatedAt,
+      )
+    : '—',
+)
 </script>
 
 <template>
@@ -47,12 +62,23 @@ const pending = computed(() => props.saving || props.publishing)
         >
       </div>
     </div>
-    <p :class="$style.status" role="status">
-      <template v-if="publishing">Публикуем график…</template>
-      <template v-else-if="saving">Сохраняем изменения…</template>
-      <template v-else-if="dirtyCount > 0">Несохранённых изменений: {{ dirtyCount }}</template>
-      <template v-else>Все изменения сохранены</template>
-    </p>
+    <div :class="$style.statuses">
+      <p :class="$style.status" role="status">
+        <template v-if="publishing">Публикуем график…</template>
+        <template v-else-if="saving">Сохраняем изменения…</template>
+        <template v-else-if="dirtyCount > 0">Несохранённых изменений: {{ dirtyCount }}</template>
+        <template v-else>Все изменения сохранены</template>
+      </p>
+      <p :class="[$style.status, $style.sync]" :data-ready="updatedAt > 0">
+        <UiIcon name="check" :size="14" />
+        <span
+          >Обновлено в
+          <time :datetime="updatedAt ? new Date(updatedAt).toISOString() : undefined">{{
+            updatedTime
+          }}</time></span
+        >
+      </p>
+    </div>
   </header>
 </template>
 
@@ -91,5 +117,26 @@ const pending = computed(() => props.saving || props.publishing)
   color: var(--schedule-color-label-secondary);
   font-size: var(--schedule-font-size-caption);
   line-height: var(--schedule-line-height-caption);
+}
+.statuses {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--figma-spacing-margin-m);
+
+  @media (width < 600px) {
+    flex-direction: column;
+    gap: var(--figma-spacing-margin-s);
+  }
+}
+.sync {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--figma-spacing-margin-s);
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+
+  &[data-ready='false'] {
+    visibility: hidden;
+  }
 }
 </style>
