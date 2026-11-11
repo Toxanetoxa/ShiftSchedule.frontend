@@ -46,7 +46,9 @@ describe('scheduleGrid', () => {
     await cells[0]!.trigger('keydown', { key: 'ArrowDown', shiftKey: true })
     expect(wrapper.emitted('changeSelection')?.at(-1)?.[0]).toHaveLength(2)
     await cells[0]!.trigger('keydown', { key: 'Enter', ctrlKey: true })
-    expect(wrapper.emitted('requestDateAction')).toEqual([[weekDates[0]!.date]])
+    expect(wrapper.emitted('requestDateAction')).toEqual([
+      [weekDates[0]!.date, expect.any(KeyboardEvent)],
+    ])
     expect(wrapper.emitted('activateCell')).toBeUndefined()
   })
 

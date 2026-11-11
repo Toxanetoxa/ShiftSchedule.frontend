@@ -3,25 +3,41 @@ import { PopoverContent, PopoverPortal, PopoverRoot, PopoverTrigger } from 'reka
 import { ref, watch } from 'vue'
 
 defineOptions({ inheritAttrs: false })
-withDefaults(defineProps<{ label: string; sideOffset?: number; pending?: boolean }>(), {
-  sideOffset: 8,
-  pending: false,
-})
+const props = withDefaults(
+  defineProps<{
+    label: string
+    sideOffset?: number
+    pending?: boolean
+    reference?: HTMLElement | null
+  }>(),
+  { sideOffset: 8, pending: false, reference: null },
+)
 const open = defineModel<boolean>('open', { default: false })
 const returnFocus = ref<HTMLElement | null>(null)
+let interactedOutside = false
 watch(
-  open,
-  (value) => {
-    if (value && typeof document !== 'undefined' && document.activeElement instanceof HTMLElement)
-      returnFocus.value = document.activeElement
+  [open, () => props.reference],
+  ([value]) => {
+    if (value) {
+      interactedOutside = false
+      returnFocus.value =
+        props.reference ||
+        (typeof document !== 'undefined' && document.activeElement instanceof HTMLElement
+          ? document.activeElement
+          : null)
+    }
   },
-  { flush: 'sync' },
+  { flush: 'sync', immediate: true },
 )
 function restoreFocus(event: Event): void {
-  if (returnFocus.value?.isConnected) {
+  if (!interactedOutside && returnFocus.value?.isConnected) {
     event.preventDefault()
-    returnFocus.value.focus()
+    returnFocus.value.focus({ preventScroll: true })
   }
+}
+function interactOutside(event: Event): void {
+  if (props.pending) event.preventDefault()
+  else interactedOutside = true
 }
 
 function updateOpen(value: boolean, pending: boolean): void {
@@ -39,10 +55,11 @@ function updateOpen(value: boolean, pending: boolean): void {
         side="bottom"
         align="start"
         :side-offset="sideOffset"
+        :reference="reference || undefined"
         :aria-label="label"
         @close-auto-focus="restoreFocus"
         @escape-key-down="pending && $event.preventDefault()"
-        @interact-outside="pending && $event.preventDefault()"
+        @interact-outside="interactOutside"
       >
         <slot :close="() => updateOpen(false, pending)" />
       </PopoverContent>

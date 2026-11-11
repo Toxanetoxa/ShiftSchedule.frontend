@@ -13,7 +13,12 @@ import { configuredScheduleId } from '@schedule/api/api'
 import { scheduleKeys } from '@schedule/api/query'
 import { addCalendarDays } from '@schedule/domain/calendar'
 import { cellKey } from '@schedule/domain/types'
-import { ScheduleHeader, ShiftTemplatePanel } from '@schedule/ui'
+import {
+  CellActionPopover,
+  DateActionPopover,
+  ScheduleHeader,
+  ShiftTemplatePanel,
+} from '@schedule/ui'
 import { QueryClient, VueQueryPlugin } from '@tanstack/vue-query'
 import { DOMWrapper, flushPromises, mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -320,6 +325,57 @@ async function applyMorning(wrapper: VueWrapper, date: string): Promise<void> {
 }
 
 describe('schedulePage real component integration', () => {
+  it('anchors cell and date actions to the grid without adding controls above it', async () => {
+    const server = createServer()
+    const { wrapper } = await mountApp()
+    const calendarSection = wrapper.get('section[aria-label="Календарь смен"]').element
+    const childCount = calendarSection.children.length
+    const gridElement = wrapper.get('[role="grid"]').element
+    const target = cell(wrapper, borisId, server.range().from)
+
+    await target.trigger('contextmenu', { button: 2 })
+    await flushPromises()
+    const menu = document.querySelector<HTMLElement>('[role="menu"]')!
+    expect(menu).not.toBeNull()
+    expect(wrapper.getComponent(CellActionPopover).props('reference')).toBe(target.element)
+    expect(calendarSection.children.length).toBe(childCount)
+    menu.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }),
+    )
+    await flushPromises()
+    expect(document.querySelector('[role="menu"]')).toBeNull()
+    expect(document.activeElement).toBe(target.element)
+
+    const dateButton = wrapper.get<HTMLButtonElement>('[role="columnheader"] button')
+    await dateButton.trigger('click')
+    await flushPromises()
+    expect(wrapper.getComponent(DateActionPopover).props('reference')).toBe(dateButton.element)
+    expect(calendarSection.children.length).toBe(childCount)
+    const picker = document.querySelector<HTMLElement>('[role="dialog"]')!
+    await button(picker, 'Выделить ячейки даты').trigger('click')
+    await flushPromises()
+    expect(document.querySelector('[role="dialog"]')).toBeNull()
+    expect(document.activeElement).toBe(dateButton.element)
+    expect(wrapper.findAll('[data-cell-key][aria-selected="true"]')).toHaveLength(2)
+    expect(wrapper.get('[role="grid"]').element).toBe(gridElement)
+  })
+
+  it('leaves focus in the custom shift form when opened from a cell menu', async () => {
+    const server = createServer()
+    const { wrapper } = await mountApp()
+    await cell(wrapper, annaId, server.range().from).trigger('contextmenu', { button: 2 })
+    await flushPromises()
+    const customAction = [...document.querySelectorAll<HTMLElement>('[role="menuitem"]')].find(
+      (item) => item.textContent?.includes('Своя смена'),
+    )!
+    await new DOMWrapper(customAction).trigger('click')
+    await flushPromises()
+    expect(document.querySelector('[role="menu"]')).toBeNull()
+    expect(document.activeElement).toBe(
+      wrapper.getComponent(ShiftTemplatePanel).get('input').element,
+    )
+  })
+
   it('keeps the grid, draft, selection and scroll position during a background refresh', async () => {
     const server = createServer()
     const { wrapper, client } = await mountApp()

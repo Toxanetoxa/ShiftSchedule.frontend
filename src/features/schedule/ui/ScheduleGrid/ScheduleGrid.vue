@@ -46,7 +46,7 @@ const emit = defineEmits<{
   activateCell: [cell: CellRef, event: MouseEvent | KeyboardEvent]
   changeSelection: [keys: CellKey[]]
   requestMove: [cell: CellRef]
-  requestDateAction: [date: IsoDate]
+  requestDateAction: [date: IsoDate, event: MouseEvent | KeyboardEvent]
   openCellActions: [cell: CellRef, event: MouseEvent | KeyboardEvent]
   clearCells: [cells: CellRef[]]
   cancelMove: []
@@ -124,7 +124,7 @@ function activate(cell: CellRef, event: MouseEvent | KeyboardEvent): void {
     return
   }
   if (event instanceof KeyboardEvent) {
-    if (event.ctrlKey || event.metaKey) emit('requestDateAction', cell.workDate)
+    if (event.ctrlKey || event.metaKey) emit('requestDateAction', cell.workDate, event)
     else emit('activateCell', cell, event)
     return
   }
@@ -245,7 +245,7 @@ defineExpose({ focusCell: moveFocus })
         :covered="(counts[date.date] || 0) > 0"
         :disabled="disabled || loading"
         :tab-index="-1"
-        @open-date-actions="emit('requestDateAction', date.date)"
+        @open-date-actions="emit('requestDateAction', date.date, $event)"
       />
     </div>
     <div v-if="loading" :class="$style.empty" role="row">

@@ -10,15 +10,17 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from 'reka-ui'
+import { watch } from 'vue'
 
-withDefaults(
+const props = withDefaults(
   defineProps<{
     cell: CellRef
     templates: readonly ShiftTemplate[]
     shift?: ShiftViewModel | null
     disabled?: boolean
+    reference?: HTMLElement | null
   }>(),
-  { shift: null, disabled: false },
+  { shift: null, disabled: false, reference: null },
 )
 const emit = defineEmits<{
   applyTemplate: [templateId: string]
@@ -27,11 +29,26 @@ const emit = defineEmits<{
   startMove: []
 }>()
 const open = defineModel<boolean>('open', { default: false })
+let restoreToReference = true
+watch([open, () => props.reference], ([value]) => {
+  if (value) restoreToReference = true
+})
+function editOrMove(action: 'editCustom' | 'startMove'): void {
+  restoreToReference = false
+  if (action === 'editCustom') emit('editCustom')
+  else emit('startMove')
+}
+function restoreFocus(event: Event): void {
+  if (!props.reference) return
+  event.preventDefault()
+  if (restoreToReference && props.reference.isConnected)
+    props.reference.focus({ preventScroll: true })
+}
 </script>
 
 <template>
-  <DropdownMenuRoot v-model:open="open">
-    <DropdownMenuTrigger as-child
+  <DropdownMenuRoot v-model:open="open" :modal="!reference">
+    <DropdownMenuTrigger v-if="!reference" as-child
       ><slot name="trigger"
         ><UiButton color="neutral" variant="tertiary" size="compact" :disabled="disabled"
           >Действия со сменой</UiButton
@@ -42,11 +59,17 @@ const open = defineModel<boolean>('open', { default: false })
       <DropdownMenuContent
         :class="$style.menu"
         :side-offset="6"
+        :reference="reference || undefined"
         align="start"
         :aria-label="`Действия со сменой ${cell.workDate}`"
+        @close-auto-focus="restoreFocus"
+        @interact-outside="restoreToReference = false"
       >
         <DropdownMenuLabel :class="$style.label">{{ cell.workDate }}</DropdownMenuLabel>
-        <DropdownMenuItem :class="$style.item" :disabled="disabled" @select="emit('editCustom')"
+        <DropdownMenuItem
+          :class="$style.item"
+          :disabled="disabled"
+          @select="editOrMove('editCustom')"
           >Своя смена…</DropdownMenuItem
         >
         <DropdownMenuItem
@@ -61,7 +84,7 @@ const open = defineModel<boolean>('open', { default: false })
         <DropdownMenuItem
           :class="$style.item"
           :disabled="disabled || !shift"
-          @select="emit('startMove')"
+          @select="editOrMove('startMove')"
           >Перенести смену…</DropdownMenuItem
         >
         <DropdownMenuItem

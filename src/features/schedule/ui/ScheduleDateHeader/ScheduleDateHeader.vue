@@ -19,23 +19,23 @@ withDefaults(
   },
 )
 
-const emit = defineEmits<{ openDateActions: [] }>()
+const emit = defineEmits<{ openDateActions: [event: MouseEvent] }>()
 </script>
 
 <template>
   <div :class="$style.header" role="columnheader" :data-covered="covered" :data-today="isToday">
-    <span
+    <button
       :class="$style.button"
       type="button"
       :disabled="disabled"
       :tabindex="tabIndex"
       :aria-label="`${weekdayLabel}, ${dayLabel}, ${date}${isToday ? ', сегодня' : ''}, ${covered ? 'смены назначены' : 'нет смен'}. Действия с датой`"
       :aria-current="isToday ? 'date' : undefined"
-      @click="emit('openDateActions')"
+      @click="emit('openDateActions', $event)"
     >
       <span>{{ weekdayLabel }}</span>
       <span :class="$style.day">{{ dayLabel }}</span>
-    </span>
+    </button>
   </div>
 </template>
 

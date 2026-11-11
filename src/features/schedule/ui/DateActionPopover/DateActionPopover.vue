@@ -8,8 +8,9 @@ withDefaults(
     visibleEmployeeCount: number
     templates: readonly ShiftTemplate[]
     disabled?: boolean
+    reference?: HTMLElement | null
   }>(),
-  { disabled: false },
+  { disabled: false, reference: null },
 )
 const emit = defineEmits<{ applyTemplate: [templateId: string]; selectDateCells: [] }>()
 const open = defineModel<boolean>('open', { default: false })
@@ -26,8 +27,13 @@ function select(blocked: boolean): void {
 </script>
 
 <template>
-  <UiPopover v-model:open="open" :label="`Действия на дату ${date}`" :class="$style.picker">
-    <template #trigger
+  <UiPopover
+    v-model:open="open"
+    :label="`Действия на дату ${date}`"
+    :class="$style.picker"
+    :reference="reference"
+  >
+    <template v-if="!reference" #trigger
       ><slot name="trigger"
         ><UiButton color="neutral" variant="tertiary" size="compact" :disabled="disabled">{{
           date

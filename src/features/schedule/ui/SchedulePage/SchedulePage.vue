@@ -33,7 +33,7 @@ import ShiftTemplatePanel from '@schedule/ui/ShiftTemplatePanel/ShiftTemplatePan
 import TemplatePickerPopover from '@schedule/ui/TemplatePickerPopover/TemplatePickerPopover.vue'
 import UnsavedChangesDialog from '@schedule/ui/UnsavedChangesDialog/UnsavedChangesDialog.vue'
 import { AppShell, UiButton, UiDialog, UiIcon } from '@ui'
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
 
 const workspace = useScheduleWorkspace()
 const {
@@ -85,6 +85,8 @@ const uiError = ref('')
 const actionCell = ref<CellRef | null>(null)
 const cellMenuOpen = ref(false)
 const actionDate = ref<IsoDate | null>(null)
+const cellMenuReference = shallowRef<HTMLElement | null>(null)
+const dateMenuReference = shallowRef<HTMLElement | null>(null)
 const dateMenuOpen = ref(false)
 const grid = ref<InstanceType<typeof ScheduleGrid> | null>(null)
 const panelRoot = ref<HTMLElement | null>(null)
@@ -279,13 +281,17 @@ async function openEditor(cell: CellRef): Promise<void> {
     panelRoot.value?.querySelector<HTMLInputElement>('input')?.focus()
   }
 }
-function openCellMenu(cell: CellRef): void {
+function openCellMenu(cell: CellRef, event: MouseEvent | KeyboardEvent): void {
   if (interactionsDisabled.value) return
+  dateMenuOpen.value = false
+  cellMenuReference.value = event.currentTarget instanceof HTMLElement ? event.currentTarget : null
   actionCell.value = { ...cell }
   cellMenuOpen.value = true
 }
-function openDateMenu(date: IsoDate): void {
+function openDateMenu(date: IsoDate, event: MouseEvent | KeyboardEvent): void {
   if (interactionsDisabled.value) return
+  cellMenuOpen.value = false
+  dateMenuReference.value = event.currentTarget instanceof HTMLElement ? event.currentTarget : null
   actionDate.value = date
   dateMenuOpen.value = true
 }
@@ -363,6 +369,8 @@ watch(search, () => {
   dateMenuOpen.value = false
   actionCell.value = null
   actionDate.value = null
+  cellMenuReference.value = null
+  dateMenuReference.value = null
   pickerOpen.value = false
 })
 watch(selectedCells, (cells) => {
@@ -379,6 +387,8 @@ watch(
     uiMessage.value = ''
     actionCell.value = null
     actionDate.value = null
+    cellMenuReference.value = null
+    dateMenuReference.value = null
     pickerOpen.value = false
   },
 )
@@ -589,6 +599,7 @@ onBeforeUnmount(() => {
             <CellActionPopover
               v-if="actionCell"
               v-model:open="cellMenuOpen"
+              :reference="cellMenuReference"
               :cell="actionCell"
               :shift="actionShift"
               :templates="templates"
@@ -599,19 +610,11 @@ onBeforeUnmount(() => {
               @apply-template="
                 execute({ kind: 'template', templateId: $event, targets: [actionCell] })
               "
-              ><template #trigger
-                ><UiButton
-                  color="neutral"
-                  variant="tertiary"
-                  size="compact"
-                  :disabled="interactionsDisabled"
-                  >Действия ячейки · {{ actionCell.workDate }}</UiButton
-                ></template
-              ></CellActionPopover
-            >
+            />
             <DateActionPopover
               v-if="actionDate"
               v-model:open="dateMenuOpen"
+              :reference="dateMenuReference"
               :date="actionDate"
               :visible-employee-count="filteredRows.length"
               :templates="templates"
@@ -620,16 +623,7 @@ onBeforeUnmount(() => {
               @apply-template="
                 execute({ kind: 'template', templateId: $event, targets: dateTargets() })
               "
-              ><template #trigger
-                ><UiButton
-                  color="neutral"
-                  variant="tertiary"
-                  size="compact"
-                  :disabled="interactionsDisabled"
-                  >Действия даты · {{ actionDate }}</UiButton
-                ></template
-              ></DateActionPopover
-            >
+            />
             <div v-if="loadError && !rows.length" :class="$style.loadError" role="alert">
               <p>Не удалось загрузить график.</p>
               <UiButton :loading="isFetching" @click="retry">Повторить загрузку</UiButton>
