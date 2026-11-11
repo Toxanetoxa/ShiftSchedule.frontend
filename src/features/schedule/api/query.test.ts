@@ -3,6 +3,7 @@ import { QueryClient, VueQueryPlugin } from '@tanstack/vue-query'
 import { flushPromises, mount } from '@vue/test-utils'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { defineComponent, h, nextTick, ref } from 'vue'
+import { ApiTimeoutError } from '@/shared/api/client'
 import { getCalendar } from './api'
 import { keepNewestCalendar, useCalendarQuery } from './query'
 
@@ -34,6 +35,26 @@ afterEach(() => {
 })
 
 describe('calendar query', () => {
+  it('retries a timed-out read once and then exposes the actionable error', async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retryDelay: 0 } } })
+    clients.push(client)
+    const failure = new ApiTimeoutError()
+    vi.mocked(getCalendar).mockRejectedValue(failure)
+    let query!: ReturnType<typeof useCalendarQuery>
+    mount(
+      defineComponent({
+        setup() {
+          query = useCalendarQuery(firstId, initialRange)
+          return () => h('div')
+        },
+      }),
+      { global: { plugins: [[VueQueryPlugin, { queryClient: client }]] } },
+    )
+
+    await vi.waitFor(() => expect(query.isError.value).toBe(true))
+    expect(getCalendar).toHaveBeenCalledTimes(2)
+    expect(query.error.value).toBe(failure)
+  })
   it('tracks range and schedule refs without displaying the previous range during a new request', async () => {
     const id = ref(firstId)
     const range = ref<ApiDateRange>({ ...initialRange })

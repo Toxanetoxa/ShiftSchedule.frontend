@@ -1,4 +1,12 @@
 export const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL || '/api').replace(/\/+$/, '')
+export const apiRequestTimeoutMs = 30_000
+
+export class ApiTimeoutError extends Error {
+  constructor() {
+    super('Сервер слишком долго отвечает. Проверьте соединение и повторите запрос.')
+    this.name = 'ApiTimeoutError'
+  }
+}
 
 export class ApiError extends Error {
   readonly status: number
@@ -41,43 +49,57 @@ export async function requestJson(path = '', options: JsonRequestOptions = {}): 
   const url = path ? `${apiBaseUrl}/${path.replace(/^\/+/, '')}` : apiBaseUrl
   const headers: Record<string, string> = { Accept: 'application/json' }
   if (options.body !== undefined) headers['Content-Type'] = 'application/json'
-  const response = await fetch(url, {
-    method: options.method ?? 'GET',
-    headers,
-    body: options.body === undefined ? undefined : JSON.stringify(options.body),
-    signal: options.signal,
-  })
+  const controller = new AbortController()
+  const cancel = (): void => controller.abort(options.signal?.reason)
+  if (options.signal?.aborted) cancel()
+  else options.signal?.addEventListener('abort', cancel, { once: true })
+  const timeout = setTimeout(() => controller.abort(new ApiTimeoutError()), apiRequestTimeoutMs)
 
-  if (!acceptsJson(response.headers.get('content-type'))) {
-    if (!response.ok) throw new ApiError(response.status)
-    throw new ApiError(
-      response.status,
-      'INVALID_RESPONSE',
-      'Ожидался JSON-ответ API. Проверьте адрес сервера.',
-    )
-  }
-
-  let data: unknown
   try {
-    data = await response.json()
+    const response = await fetch(url, {
+      method: options.method ?? 'GET',
+      headers,
+      body: options.body === undefined ? undefined : JSON.stringify(options.body),
+      signal: controller.signal,
+    })
+
+    if (!acceptsJson(response.headers.get('content-type'))) {
+      if (!response.ok) throw new ApiError(response.status)
+      throw new ApiError(
+        response.status,
+        'INVALID_RESPONSE',
+        'Ожидался JSON-ответ API. Проверьте адрес сервера.',
+      )
+    }
+
+    let data: unknown
+    try {
+      data = await response.json()
+    } catch (error) {
+      // Preserve fetch/body-stream network and abort errors so writes can be reconciled before retrying.
+      if (!(error instanceof SyntaxError)) throw error
+      if (!response.ok) throw new ApiError(response.status)
+      throw new ApiError(response.status, 'INVALID_RESPONSE', 'API вернул некорректный JSON.')
+    }
+
+    if (!response.ok) {
+      const envelope = isRecord(data) && isRecord(data.error) ? data.error : null
+      throw new ApiError(
+        response.status,
+        typeof envelope?.code === 'string' ? envelope.code : undefined,
+        typeof envelope?.message === 'string' ? envelope.message : undefined,
+        isRecord(envelope?.details) ? envelope.details : {},
+      )
+    }
+
+    return data
   } catch (error) {
-    // Preserve fetch/body-stream network and abort errors so writes can be reconciled before retrying.
-    if (!(error instanceof SyntaxError)) throw error
-    if (!response.ok) throw new ApiError(response.status)
-    throw new ApiError(response.status, 'INVALID_RESPONSE', 'API вернул некорректный JSON.')
+    if (controller.signal.aborted) throw controller.signal.reason
+    throw error
+  } finally {
+    clearTimeout(timeout)
+    options.signal?.removeEventListener('abort', cancel)
   }
-
-  if (!response.ok) {
-    const envelope = isRecord(data) && isRecord(data.error) ? data.error : null
-    throw new ApiError(
-      response.status,
-      typeof envelope?.code === 'string' ? envelope.code : undefined,
-      typeof envelope?.message === 'string' ? envelope.message : undefined,
-      isRecord(envelope?.details) ? envelope.details : {},
-    )
-  }
-
-  return data
 }
 
 export function getJson(path = '', signal?: AbortSignal): Promise<unknown> {

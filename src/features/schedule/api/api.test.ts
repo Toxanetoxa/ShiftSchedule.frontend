@@ -56,8 +56,28 @@ describe('schedule HTTP operations', () => {
 
     expect(fetchMock).toHaveBeenCalledWith(
       `/api/v1/schedules/${scheduleId}/calendar?from=2026-11-09&to=2026-11-11`,
-      expect.objectContaining({ method: 'GET', signal }),
+      expect.objectContaining({ method: 'GET', signal: expect.any(AbortSignal) }),
     )
+  })
+
+  it('cancels the calendar read when the query controller is aborted', async () => {
+    const controller = new AbortController()
+    const reason = new DOMException('Period changed', 'AbortError')
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        (_url: string, options: RequestInit) =>
+          new Promise<Response>((_, reject) => {
+            options.signal!.addEventListener('abort', () => reject(options.signal!.reason), {
+              once: true,
+            })
+          }),
+      ),
+    )
+
+    const rejection = expect(getCalendar(scheduleId, range, controller.signal)).rejects.toBe(reason)
+    controller.abort(reason)
+    await rejection
   })
 
   it('sends only writable ShiftInput fields and accepts a complete normalized acknowledgement', async () => {

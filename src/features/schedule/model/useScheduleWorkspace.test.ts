@@ -15,6 +15,7 @@ import { QueryClient, VueQueryPlugin } from '@tanstack/vue-query'
 import { flushPromises, mount } from '@vue/test-utils'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { defineComponent, h } from 'vue'
+import { apiRequestTimeoutMs } from '@/shared/api/client'
 import { useScheduleWorkspace } from './useScheduleWorkspace'
 
 const employeeId = '00000000-0000-4000-8000-000000000201'
@@ -27,6 +28,7 @@ interface RequestRecord {
   method: string
   url: URL
   body: Record<string, unknown> | undefined
+  signal?: AbortSignal | null
 }
 
 afterEach(async () => {
@@ -36,6 +38,7 @@ afterEach(async () => {
     client.clear()
   }
   vi.restoreAllMocks()
+  vi.useRealTimers()
 })
 
 function deferred<T>() {
@@ -66,6 +69,7 @@ function transport(
       body: options?.body
         ? (JSON.parse(String(options.body)) as Record<string, unknown>)
         : undefined,
+      signal: options?.signal,
     }
     requests.push(request)
     return Promise.resolve(handler(request))
@@ -182,6 +186,46 @@ function edit(workspace: Workspace, startTime = '10:00', endTime = '18:00'): Api
 }
 
 describe('useScheduleWorkspace write reconciliation', () => {
+  it('unlocks a timed-out save and reconciles its preserved draft without resending the PATCH', async () => {
+    vi.useFakeTimers()
+    let version = 1
+    let saved: ApiShift | undefined
+    const requests = transport((request) => {
+      if (request.method === 'GET')
+        return json(calendar(requestedRange(request), version, saved ? [saved] : []))
+      const change = (request.body as unknown as SaveCellsRequest).changes[0]!
+      saved = assignment(change.workDate, change.shift!.startTime, change.shift!.endTime)
+      version = 2
+      // The server applied the write, but its response never arrives.
+      return new Promise((_, reject) =>
+        request.signal!.addEventListener('abort', () => reject(request.signal!.reason), {
+          once: true,
+        }),
+      )
+    })
+    const { workspace } = await createWorkspace()
+    edit(workspace)
+    const saving = workspace.save()
+    await flushPromises()
+    expect(workspace.busy.value).toBe(true)
+
+    await vi.advanceTimersByTimeAsync(apiRequestTimeoutMs)
+    expect(await saving).toBe(false)
+    expect(workspace.busy.value).toBe(false)
+    expect(workspace.canEdit.value).toBe(true)
+    expect(workspace.error.value).toContain('Результат сохранения неизвестен')
+    expect(workspace.remoteUpdated.value).toBe(true)
+    expect(workspace.dirtyKeys.value).toEqual([cellKey(reference(workspace))])
+    expect(localShift(workspace)?.startTime).toBe('10:00')
+    expect(writes(requests)).toHaveLength(1)
+
+    await workspace.retry()
+    expect(workspace.reviewOpen.value).toBe(true)
+    expect(workspace.confirmRebase({ remoteVersion: 2, resolutions: [] })).toBe(true)
+    expect(workspace.dirtyKeys.value).toEqual([])
+    expect(await workspace.save()).toBe(true)
+    expect(writes(requests)).toHaveLength(1)
+  })
   it('preserves a stale draft after 409 and writes again only after explicit current-version conflict choices', async () => {
     let version = 1
     let patches = 0

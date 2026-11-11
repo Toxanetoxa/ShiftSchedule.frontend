@@ -2,7 +2,7 @@ import type { MaybeRefOrGetter } from 'vue'
 import type { ApiDateRange, CalendarResponse } from './types'
 import { replaceEqualDeep, useQuery } from '@tanstack/vue-query'
 import { computed, toValue } from 'vue'
-import { ApiError } from '@/shared/api/client'
+import { ApiError, ApiTimeoutError } from '@/shared/api/client'
 import { getCalendar } from './api'
 import { isCalendarResponse } from './guards'
 
@@ -31,7 +31,7 @@ function retryRead(failureCount: number, error: Error): boolean {
   if (failureCount >= 1 || error.name === 'AbortError') return false
   if (error instanceof ApiError)
     return error.status >= 500 || error.status === 408 || error.status === 429
-  return error instanceof TypeError
+  return error instanceof TypeError || error instanceof ApiTimeoutError
 }
 
 export function useCalendarQuery(
