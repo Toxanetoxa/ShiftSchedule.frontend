@@ -11,7 +11,7 @@ const meta = {
     docs: {
       description: {
         component:
-          'М: поле 48 px, label 12 px / 140%. Р: HH:mm pattern, связанная ошибка, focus, disabled. Частичный ввод сохраняется; валидацией операции управляет форма.',
+          'Маска ЧЧ:ММ подставляет двоеточие: 0930 → 09:30. Часы ограничены диапазоном 00–23, минуты — 00–59. Поддерживаются вставка, удаление и замена цифр в середине. Частичный ввод сохраняется без дополнения нулями; валидацией операции управляет форма.',
       },
     },
   },
@@ -35,6 +35,6 @@ type Story = StoryObj<typeof meta>
 export const Default: Story = {}
 export const Filled: Story = { args: { modelValue: '09:30' } }
 export const InvalidProposed: Story = {
-  args: { modelValue: '25:40', error: 'Введите время от 00:00 до 23:59.' },
+  args: { modelValue: '09:3', error: 'Введите время полностью в формате ЧЧ:ММ.' },
 }
 export const DisabledProposed: Story = { args: { modelValue: '09:30', disabled: true } }

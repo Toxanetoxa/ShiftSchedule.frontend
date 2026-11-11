@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { UiIcon } from '@ui'
-import { computed, useId } from 'vue'
+import IMask from 'imask/holder'
+import MaskedRange from 'imask/masked/range'
+import { computed, onBeforeUnmount, onMounted, ref, useId, watch } from 'vue'
 
 const props = withDefaults(
   defineProps<{
@@ -16,10 +18,37 @@ const props = withDefaults(
 const emit = defineEmits<{ 'update:modelValue': [value: string]; blur: [event: FocusEvent] }>()
 const generatedId = useId()
 const inputId = computed(() => props.id || generatedId)
+const input = ref<HTMLInputElement | null>(null)
+let mask: ReturnType<typeof IMask> | undefined
 
-function update(event: Event): void {
-  if (event.target instanceof HTMLInputElement) emit('update:modelValue', event.target.value)
-}
+onMounted(() => {
+  if (!input.value) return
+
+  mask = IMask(input.value, {
+    mask: 'HH:`MM',
+    // Eager append would reject the literal colon in pasted HH:mm with skipInvalid disabled.
+    eager: 'remove',
+    overwrite: true,
+    skipInvalid: false,
+    autofix: false,
+    blocks: {
+      HH: { mask: MaskedRange, from: 0, to: 23, maxLength: 2 },
+      MM: { mask: MaskedRange, from: 0, to: 59, maxLength: 2 },
+    },
+  })
+  mask.on('accept', () => {
+    if (mask && mask.value !== props.modelValue) emit('update:modelValue', mask.value)
+  })
+  mask.value = props.modelValue
+})
+
+watch(
+  () => props.modelValue,
+  (value) => {
+    if (mask && mask.value !== value) mask.value = value
+  },
+)
+onBeforeUnmount(() => mask?.destroy())
 </script>
 
 <template>
@@ -32,19 +61,17 @@ function update(event: Event): void {
     >
       <input
         :id="inputId"
+        ref="input"
         :class="$style.input"
         type="text"
         inputmode="numeric"
         autocomplete="off"
         placeholder="00:00"
-        maxlength="5"
         pattern="([01][0-9]|2[0-3]):[0-5][0-9]"
-        :value="modelValue"
         :disabled="disabled"
         :required="required"
         :aria-invalid="Boolean(error) || undefined"
         :aria-describedby="error ? `${inputId}-error` : undefined"
-        @input="update"
         @blur="emit('blur', $event)"
       />
       <UiIcon name="clock" />

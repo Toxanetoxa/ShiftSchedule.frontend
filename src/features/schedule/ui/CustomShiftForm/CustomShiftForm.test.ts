@@ -1,14 +1,31 @@
 import { EmployeeSearch } from '@schedule/ui'
 import { mount } from '@vue/test-utils'
 import { describe, expect, it } from 'vitest'
+import { nextTick } from 'vue'
 import CustomShiftForm from './CustomShiftForm.vue'
+
+async function typeTime(input: HTMLInputElement, text: string): Promise<void> {
+  input.focus()
+  input.setSelectionRange(0, input.value.length)
+  for (const character of text) {
+    const start = input.selectionStart ?? input.value.length
+    const end = input.selectionEnd ?? start
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: character, bubbles: true }))
+    input.value = input.value.slice(0, start) + character + input.value.slice(end)
+    input.setSelectionRange(start + 1, start + 1)
+    input.dispatchEvent(
+      new InputEvent('input', { bubbles: true, inputType: 'insertText', data: character }),
+    )
+    await nextTick()
+  }
+}
 
 describe('customShiftForm', () => {
   it('does not apply while typing and submits a night shift as one explicit intent', async () => {
-    const wrapper = mount(CustomShiftForm, { props: { selectedCount: 2 } })
+    const wrapper = mount(CustomShiftForm, { props: { selectedCount: 2 }, attachTo: document.body })
     const inputs = wrapper.findAll('input')
-    await inputs[0]!.setValue('22:00')
-    await inputs[1]!.setValue('06:00')
+    await typeTime(inputs[0]!.element, '2200')
+    await typeTime(inputs[1]!.element, '0600')
     expect(wrapper.emitted('apply')).toBeUndefined()
     expect(wrapper.text()).toContain('следующий день')
     await wrapper.get('form').trigger('submit')
