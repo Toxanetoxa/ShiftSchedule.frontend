@@ -1,0 +1,25 @@
+@mixin card {
+  display: flex;
+  box-sizing: border-box;
+  inline-size: 100%;
+  min-inline-size: 0;
+  min-block-size: var(--schedule-shift-height);
+  gap: var(--schedule-template-gap);
+  padding: var(--schedule-template-padding-block) var(--schedule-template-padding-end)
+    var(--schedule-template-padding-block) var(--schedule-template-padding-start);
+  border-radius: var(--schedule-radius-control);
+  color: var(--schedule-color-template-text);
+  background: var(--schedule-color-template-bg);
+  box-shadow: inset var(--schedule-template-accent-width) 0 0 var(--_template-accent);
+
+  &[data-kind='morning'] {
+    --_template-accent: var(--schedule-shift-morning-template-accent);
+    gap: var(--schedule-template-morning-gap);
+  }
+  &[data-kind='day'] {
+    --_template-accent: var(--schedule-shift-day-template-accent);
+  }
+  &[data-kind='evening'] {
+    --_template-accent: var(--schedule-shift-evening-template-accent);
+  }
+}

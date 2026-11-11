@@ -1,0 +1,25 @@
+@mixin screen {
+  display: grid;
+  gap: var(--schedule-main-gap);
+  min-inline-size: 0;
+}
+
+@mixin layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--schedule-panel-width);
+  gap: var(--schedule-workspace-gap);
+  align-items: start;
+
+  &[data-narrow='true'] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@mixin calendar {
+  display: grid;
+  gap: var(--schedule-calendar-gap);
+  min-inline-size: 0;
+  padding: var(--schedule-calendar-padding);
+  border-radius: var(--schedule-calendar-radius);
+  background: var(--schedule-color-surface-primary);
+}

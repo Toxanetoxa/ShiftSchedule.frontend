@@ -1,0 +1,39 @@
+@mixin overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--schedule-z-dialog);
+  background: rgb(16 16 18 / 0.4);
+}
+
+@mixin panel($width: 600px) {
+  position: fixed;
+  inset-block-start: 50%;
+  inset-inline-start: 50%;
+  transform: translate(-50%, -50%);
+  z-index: calc(var(--schedule-z-dialog) + 1);
+  inline-size: min($width, calc(100vw - 32px));
+  max-block-size: calc(100dvh - 32px);
+  overflow: auto;
+  box-sizing: border-box;
+  padding: 24px;
+  border: 1px solid var(--schedule-color-border-subtle);
+  border-radius: var(--schedule-radius-panel);
+  background: var(--schedule-color-surface-primary);
+  color: var(--schedule-color-label-primary);
+  font-family: var(--schedule-font-family), system-ui, sans-serif;
+}
+
+@mixin title {
+  margin: 0;
+  font-size: 20px;
+  line-height: 28px;
+  font-weight: 600;
+}
+
+@mixin actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-block-start: 24px;
+}
