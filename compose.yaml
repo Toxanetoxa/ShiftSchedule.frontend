@@ -1,0 +1,68 @@
+name: shiftschedule-front
+
+services:
+  app:
+    image: node:26-bookworm-slim
+    init: true
+    working_dir: /app
+    entrypoint: [sh, /app/docker/entrypoint.sh]
+    command: [npm, run, dev, --, --host, 0.0.0.0, --port, '5173', --strictPort]
+    environment:
+      FRONT_PORT: ${FRONT_PORT:-5173}
+      VITE_HMR_HOST: ${VITE_HMR_HOST:-localhost}
+      VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api/v1}
+      VITE_SCHEDULE_ID: ${VITE_SCHEDULE_ID:-00000000-0000-4000-8000-000000000001}
+      VITE_STORYBOOK_URL: ${VITE_STORYBOOK_URL:-http://localhost:${STORYBOOK_PORT:-6006}}
+      API_PROXY_TARGET: ${API_PROXY_TARGET:-http://host.docker.internal:8000}
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+    ports:
+      - '127.0.0.1:${FRONT_PORT:-5173}:5173'
+    volumes:
+      - .:/app
+      - node_modules:/app/node_modules
+    healthcheck:
+      test:
+        [
+          CMD,
+          node,
+          -e,
+          "fetch('http://127.0.0.1:5173/').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 24
+      start_period: 120s
+    restart: 'on-failure:3'
+
+  storybook:
+    image: node:26-bookworm-slim
+    init: true
+    working_dir: /app
+    entrypoint: [sh, /app/docker/entrypoint.sh]
+    command: [npm, run, storybook, --, --host, 0.0.0.0, --port, '6006', --ci, --no-open]
+    environment:
+      STORYBOOK_HMR_PORT: ${STORYBOOK_PORT:-6006}
+      STORYBOOK_HMR_HOST: ${VITE_HMR_HOST:-localhost}
+    ports:
+      - '127.0.0.1:${STORYBOOK_PORT:-6006}:6006'
+    volumes:
+      - .:/app
+      - storybook_node_modules:/app/node_modules
+    healthcheck:
+      test:
+        [
+          CMD,
+          node,
+          -e,
+          "fetch('http://127.0.0.1:6006/index.json').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 24
+      start_period: 120s
+    restart: 'on-failure:3'
+
+volumes:
+  node_modules:
+  storybook_node_modules:
